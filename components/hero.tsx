@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +8,7 @@ const { width, height } = Dimensions.get('window');
 
 export function Hero() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   // Calculate navbar height: safe area top + paddingTop (8) + animated padding (16) + container padding (12) + content height (~24)
   const navbarHeight = insets.top + 8 + 16 + 12 + 24;
   // Calculate available height for centering (viewport height minus navbar)
@@ -39,13 +41,13 @@ export function Hero() {
 
         {/* CTA Buttons */}
         <View style={styles.buttonContainer}>
-          <Pressable style={styles.primaryButton}>
+          <Pressable style={styles.primaryButton} onPress={() => router.push('/chat')}>
             <Text style={styles.primaryButtonText}>
               Call Reinforcement{' '}
               <Ionicons name="arrow-forward" size={16} color="#000" />
             </Text>
           </Pressable>
-          <Pressable style={styles.secondaryButton}>
+          <Pressable style={styles.secondaryButton} onPress={() => router.push('/learn')}>
             <Text style={styles.secondaryButtonText}>Learn</Text>
           </Pressable>
         </View>

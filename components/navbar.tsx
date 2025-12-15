@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const navLinks: Array<{ name: string; href: string; isRoute?: boolean; isExternal?: boolean }> = [
   { name: 'Home', href: '#home' },
@@ -14,9 +15,18 @@ const navLinks: Array<{ name: string; href: string; isRoute?: boolean; isExterna
 
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(() => Dimensions.get('window').width);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
+
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setWindowWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
 
   const animatedNavStyle = useAnimatedStyle(() => ({
     paddingVertical: 16,
@@ -96,56 +106,83 @@ export function Navbar() {
     );
   };
 
+  const dynamicStyles = {
+    navbar: {
+      paddingHorizontal: windowWidth < 768 ? 16 : 24,
+    },
+    navContainer: {
+      paddingHorizontal: windowWidth < 768 ? 16 : 24,
+      paddingVertical: windowWidth < 768 ? 10 : 12,
+    },
+    logo: {
+      fontSize: windowWidth < 768 ? 20 : 24,
+    },
+    desktopMenu: {
+      gap: windowWidth < 1024 ? 24 : 32,
+    },
+    mobileNavLinkText: {
+      fontSize: windowWidth < 400 ? 24 : 32,
+    },
+    mobileChatButtonText: {
+      fontSize: windowWidth < 400 ? 18 : 24,
+    },
+  };
+
   return (
     <Animated.View
       style={[
         styles.navbar,
+        dynamicStyles.navbar,
         { paddingTop: insets.top + 8 },
         animatedNavStyle,
       ]}
     >
-      <Animated.View style={[styles.navContainer, animatedContainerStyle]}>
-        <Text style={styles.logo}>
+      <Animated.View style={[styles.navContainer, dynamicStyles.navContainer, animatedContainerStyle]}>
+        <Text style={[styles.logo, dynamicStyles.logo]}>
           superdivers<Text style={styles.logoDot}>.</Text>
         </Text>
 
         {/* Desktop Menu */}
-        <View style={styles.desktopMenu}>
-          {navLinks.map((link) => {
-            if (link.name === 'Chat') {
+        {!isMobile && (
+          <View style={[styles.desktopMenu, dynamicStyles.desktopMenu]}>
+            {navLinks.map((link) => {
+              if (link.name === 'Chat') {
+                return (
+                  <Pressable
+                    key={link.name}
+                    style={styles.chatButtonContainer}
+                    onPress={() => {
+                      if (link.isRoute) {
+                        router.push(link.href as any);
+                      }
+                    }}
+                  >
+                    <View style={styles.chatButtonInner}>
+                      <Text style={styles.chatButtonText}>Chat</Text>
+                    </View>
+                  </Pressable>
+                );
+              }
               return (
-                <Pressable
-                  key={link.name}
-                  style={styles.chatButtonContainer}
-                  onPress={() => {
-                    if (link.isRoute) {
-                      router.push(link.href as any);
-                    }
-                  }}
-                >
-                  <View style={styles.chatButtonInner}>
-                    <Text style={styles.chatButtonText}>Chat</Text>
-                  </View>
-                </Pressable>
+                <AnimatedNavLink key={link.name} link={link} />
               );
-            }
-            return (
-              <AnimatedNavLink key={link.name} link={link} />
-            );
-          })}
-        </View>
+            })}
+          </View>
+        )}
 
         {/* Mobile Menu Toggle */}
-        <Pressable
-          style={styles.mobileMenuButton}
-          onPress={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          <Ionicons
-            name={isMobileMenuOpen ? 'close' : 'menu'}
-            size={24}
-            color="#fff"
-          />
-        </Pressable>
+        {isMobile && (
+          <Pressable
+            style={styles.mobileMenuButton}
+            onPress={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <Ionicons
+              name={isMobileMenuOpen ? 'close' : 'menu'}
+              size={24}
+              color="#fff"
+            />
+          </Pressable>
+        )}
       </Animated.View>
 
       {/* Mobile Menu Overlay */}
@@ -166,7 +203,7 @@ export function Navbar() {
                     }}
                   >
                     <View style={styles.mobileChatButtonInner}>
-                      <Text style={styles.mobileChatButtonText}>Chat</Text>
+                      <Text style={[styles.mobileChatButtonText, dynamicStyles.mobileChatButtonText]}>Chat</Text>
                     </View>
                   </Pressable>
                 );
@@ -193,7 +230,7 @@ export function Navbar() {
                     }
                   }}
                 >
-                  <Text style={styles.mobileNavLinkText}>{link.name}</Text>
+                  <Text style={[styles.mobileNavLinkText, dynamicStyles.mobileNavLinkText]}>{link.name}</Text>
                 </Pressable>
               );
             })}
@@ -211,7 +248,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 50,
-    paddingHorizontal: 24,
   },
   navContainer: {
     maxWidth: 1280,
@@ -221,15 +257,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     backdropFilter: 'blur(20px)',
   },
   logo: {
-    fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
     letterSpacing: -0.5,
@@ -240,8 +273,6 @@ const styles = StyleSheet.create({
   desktopMenu: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 32,
-    display: Platform.OS === 'web' ? 'flex' : 'none',
   },
   navLink: {
     paddingVertical: 8,
@@ -283,17 +314,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mobileMenuButton: {
-    display: Platform.OS === 'web' ? 'none' : 'flex',
     padding: 8,
   },
   mobileMenuOverlay: {
-    position: 'absolute',
+    ...(Platform.OS === 'web' ? { position: 'fixed' as any } : { position: 'absolute' }),
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    zIndex: 9999,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -306,7 +336,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   mobileNavLinkText: {
-    fontSize: 32,
     fontWeight: '300',
     color: '#fff',
   },
@@ -328,7 +357,6 @@ const styles = StyleSheet.create({
   },
   mobileChatButtonText: {
     color: '#000',
-    fontSize: 24,
     fontWeight: '600',
   },
   mobileCtaButton: {
